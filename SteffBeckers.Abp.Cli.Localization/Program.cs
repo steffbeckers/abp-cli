@@ -12,7 +12,7 @@ namespace SteffBeckers.Abp.Cli.Localization
     {
         public static async Task<int> Main(string[] args)
         {
-            RootCommand rootCommand = new RootCommand("ABP.io Localization CLI");
+            RootCommand rootCommand = new RootCommand("Steff's ABP.io Localization CLI");
 
             Command listCommand = new Command("list", "Lists all localization files in directory.");
             listCommand.Handler = CommandHandler.Create(() =>
