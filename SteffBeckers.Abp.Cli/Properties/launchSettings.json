@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SteffBeckers.Abp.Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "localization export excel"
+    }
+  }
+}
