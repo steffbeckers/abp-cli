@@ -6,13 +6,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SteffBeckers.Abp.Cli.Localization
+namespace SteffBeckers.Abp.Cli
 {
     public class Program
     {
         public static async Task<int> Main(string[] args)
         {
-            RootCommand rootCommand = new RootCommand("Steff's ABP.io Localization CLI");
+            RootCommand rootCommand = new RootCommand("Steff's ABP.io CLI");
 
             Command listCommand = new Command("list", "Lists all localization files in directory.");
             listCommand.Handler = CommandHandler.Create(() =>
