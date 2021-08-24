@@ -34,6 +34,7 @@ namespace SteffBeckers.Abp.Cli
         {
             Command command = new Command("localization", "Localization commands.");
             AddLocalizationExportCommand(command);
+            AddLocalizationImportCommand(command);
             parentCommand.AddCommand(command);
         }
 
@@ -55,7 +56,7 @@ namespace SteffBeckers.Abp.Cli
                 {
                     List<LocalizationFile> localizationFiles = await GetLocalizationFiles();
 
-                    string directoryName = new DirectoryInfo(Path.GetDirectoryName(localizationFiles.First().Path)).Name;
+                    string directoryName = new DirectoryInfo(Directory.GetCurrentDirectory()).Name;
                     string spreadsheetFileName = $"{directoryName}.xlsx";
 
                     // Create a spreadsheet document by supplying the filepath
@@ -63,11 +64,11 @@ namespace SteffBeckers.Abp.Cli
                     SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Create(spreadsheetFileName, SpreadsheetDocumentType.Workbook);
 
                     // Add a WorkbookPart to the document
-                    WorkbookPart workbookpart = spreadsheetDocument.AddWorkbookPart();
-                    workbookpart.Workbook = new Workbook();
+                    WorkbookPart workbookPart = spreadsheetDocument.AddWorkbookPart();
+                    workbookPart.Workbook = new Workbook();
 
                     // Add a WorksheetPart to the WorkbookPart
-                    WorksheetPart worksheetPart = workbookpart.AddNewPart<WorksheetPart>();
+                    WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
                     worksheetPart.Worksheet = new Worksheet(new SheetData());
 
                     // Add Sheets to the Workbook
@@ -195,12 +196,104 @@ namespace SteffBeckers.Abp.Cli
                     #endregion TODO
 
                     // Save the Workbook
-                    workbookpart.Workbook.Save();
+                    workbookPart.Workbook.Save();
 
                     // Close the document
                     spreadsheetDocument.Close();
 
                     Console.WriteLine($"Exported localizations to '{spreadsheetFileName}'.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+
+                    string innerExceptionMessage = ex.InnerException?.Message;
+                    if (verbose && !string.IsNullOrEmpty(innerExceptionMessage))
+                    {
+                        Console.WriteLine("ERROR:");
+                        Console.WriteLine(innerExceptionMessage);
+                    }
+                }
+            });
+
+            parentCommand.AddCommand(command);
+        }
+
+        private static void AddLocalizationImportCommand(Command parentCommand)
+        {
+            Command command = new Command("import", "Import localization files from diverse formats.");
+            AddLocalizationImportExcelCommand(command);
+            parentCommand.AddCommand(command);
+        }
+
+        private static void AddLocalizationImportExcelCommand(Command parentCommand)
+        {
+            Command command = new Command("excel", "Import from Excel.");
+            command.AddOption(VerboseOption);
+
+            command.Handler = CommandHandler.Create<bool>(async (verbose) =>
+            {
+                try
+                {
+                    string directoryName = new DirectoryInfo(Directory.GetCurrentDirectory()).Name;
+                    string spreadsheetFileName = $"{directoryName}.xlsx";
+
+                    // New localization files to be generated
+                    List<LocalizationFile> localizationFiles = new List<LocalizationFile>();
+
+                    // Open the spreadsheet document by supplying the filepath
+                    SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Open(spreadsheetFileName, false);
+                    WorkbookPart workbookPart = spreadsheetDocument.WorkbookPart;
+                    WorksheetPart worksheetPart = workbookPart.WorksheetParts.First();
+                    SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+
+                    // Header row
+                    foreach (Cell cell in sheetData.Elements<Row>().First().Elements<Cell>().Skip(1))
+                    {
+                        string culture = ReadExcelCell(cell, workbookPart);
+                        localizationFiles.Add(new LocalizationFile()
+                        {
+                            Path = $"{culture}.json",
+                            Culture = culture,
+                            Texts = new Dictionary<string, string>()
+                        });
+                    }
+
+                    // Data rows
+                    foreach (Row row in sheetData.Elements<Row>().Skip(1))
+                    {
+                        List<Cell> cells = row.Elements<Cell>().ToList();
+                        string localizationKey = null;
+
+                        foreach (Cell cell in cells)
+                        {
+                            int cellIndex = cells.IndexOf(cell);
+                            string text = ReadExcelCell(cell, workbookPart);
+
+                            if (cellIndex == 0)
+                            {
+                                localizationKey = text;
+                                continue;
+                            }
+
+                            if (!string.IsNullOrEmpty(localizationKey))
+                            {
+                                localizationFiles[cellIndex - 1].Texts.TryAdd(localizationKey, text);
+                            }
+                        }
+                    }
+
+                    // Close the document
+                    spreadsheetDocument.Close();
+
+                    // Write to .json files
+                    foreach (LocalizationFile localizationFile in localizationFiles)
+                    {
+                        string localizationFileJson = JsonConvert.SerializeObject(localizationFile, Formatting.Indented);
+                        await File.WriteAllTextAsync(localizationFile.Path, localizationFileJson);
+                    }
+
+                    Console.WriteLine($"Imported localizations to localization files.");
                 }
                 catch (Exception ex)
                 {
@@ -248,6 +341,19 @@ namespace SteffBeckers.Abp.Cli
             }
 
             return localizationFiles;
+        }
+
+        private static string ReadExcelCell(Cell cell, WorkbookPart workbookPart)
+        {
+            CellValue cellValue = cell.CellValue;
+            string text = (cellValue == null) ? cell.InnerText : cellValue.Text;
+            if ((cell.DataType != null) && (cell.DataType == CellValues.SharedString))
+            {
+                text = workbookPart.SharedStringTablePart.SharedStringTable
+                    .Elements<SharedStringItem>().ElementAt(
+                        Convert.ToInt32(cell.CellValue.Text)).InnerText;
+            }
+            return (text ?? string.Empty).Trim();
         }
     }
 }

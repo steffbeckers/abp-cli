@@ -2,7 +2,7 @@
   "profiles": {
     "SteffBeckers.Abp.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "localization export excel --verbose"
+      "commandLineArgs": "localization import excel --verbose"
     }
   }
 }
