@@ -8,10 +8,8 @@ namespace SteffBeckers.Abp.Cli.Localization.Models
         [JsonIgnore]
         public string Path { get; set; }
 
-        [JsonProperty("culture")]
         public string Culture { get; set; }
 
-        [JsonProperty("texts")]
         public Dictionary<string, string> Texts { get; set; }
     }
 }
