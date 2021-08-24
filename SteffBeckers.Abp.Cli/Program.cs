@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Packaging;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using SteffBeckers.Abp.Cli.Localization.Models;
 using System;
 using System.Collections.Generic;
@@ -15,13 +14,30 @@ namespace SteffBeckers.Abp.Cli
     {
         public static async Task<int> Main(string[] args)
         {
-            RootCommand rootCommand = new RootCommand("Steff's ABP.io CLI");
+            RootCommand command = new RootCommand("Steff's ABP.io CLI");
+            AddLocalizationCommand(command);
+            return await command.InvokeAsync(args);
+        }
 
-            Command localizationCommand = new Command("localization", "Localization commands.");
-            Command localizationExportCommand = new Command("export", "Export localization files to other formats.");
-            Command localizationExportExcelCommand = new Command("excel", "Export to Excel.");
+        private static void AddLocalizationCommand(RootCommand parentCommand)
+        {
+            Command command = new Command("localization", "Localization commands.");
+            AddLocalizationExportCommand(command);
+            parentCommand.AddCommand(command);
+        }
 
-            localizationExportExcelCommand.Handler = CommandHandler.Create(async () =>
+        private static void AddLocalizationExportCommand(Command parentCommand)
+        {
+            Command command = new Command("export", "Export localization files to other formats.");
+            AddLocalizationExportExcelCommand(command);
+            parentCommand.AddCommand(command);
+        }
+
+        private static void AddLocalizationExportExcelCommand(Command parentCommand)
+        {
+            Command command = new Command("excel", "Export to Excel.");
+
+            command.Handler = CommandHandler.Create(async () =>
             {
                 List<LocalizationFile> localizationFiles = await GetLocalizationFiles();
 
@@ -29,13 +45,11 @@ namespace SteffBeckers.Abp.Cli
                 string spreadsheetFileName = $"{directoryName}.xslx";
 
                 await File.WriteAllTextAsync(spreadsheetFileName, "Test");
+
+                Console.WriteLine($"Exported localizations to '{spreadsheetFileName}'.");
             });
 
-            localizationExportCommand.AddCommand(localizationExportExcelCommand);
-            localizationCommand.AddCommand(localizationExportCommand);
-            rootCommand.AddCommand(localizationCommand);
-
-            return await rootCommand.InvokeAsync(args);
+            parentCommand.AddCommand(command);
         }
 
         private static async Task<List<LocalizationFile>> GetLocalizationFiles()
