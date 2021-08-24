@@ -1,12 +1,14 @@
 # ABP.io dev tools
 
-## Commands
+## SteffBeckers.Abp.Cli
+
+### Commands
 
 ```powershell
-dotnet pack -c Release
+dotnet pack -c Release -p:PackageID=SteffBeckers.Abp.Cli
 ```
 
 ```powershell
-dotnet nuget push xxxxx.nupkg --api-key <API key here> --source https://api.nuget.org/v3/index.json
+dotnet nuget push SteffBeckers.Abp.Cli.1.0.0.nupkg --api-key <API key here> --source https://api.nuget.org/v3/index.json
 ```
 
