@@ -87,7 +87,11 @@ namespace SteffBeckers.Abp.Cli
 
                     // Add header row.
                     Row headerRow = new Row();
-                    headerRow.Append(new Cell());
+                    headerRow.Append(new Cell()
+                    {
+                        DataType = CellValues.String,
+                        CellValue = new CellValue("key")
+                    });
                     foreach (LocalizationFile localizationFile in localizationFiles)
                     {
                         headerRow.Append(new Cell()
