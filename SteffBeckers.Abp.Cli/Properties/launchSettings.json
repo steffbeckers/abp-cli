@@ -2,7 +2,7 @@
   "profiles": {
     "SteffBeckers.Abp.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "localization import excel --verbose"
+      "commandLineArgs": "localization scan -lfp C:\\Dev\\codefined\\DLVTCPlatform\\aspnet-core\\src\\DLV_TC_Platform.Domain.Shared\\Localization\\DLV_TC_Platform"
     }
   }
 }
