@@ -9,6 +9,7 @@ using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SteffBeckers.Abp.Cli
@@ -139,62 +140,6 @@ namespace SteffBeckers.Abp.Cli
                         sheetData.Append(row);
                     }
 
-                    #region TODO
-
-                    //TableDefinitionPart tableDefinitionPart = worksheetPart.AddNewPart<TableDefinitionPart>("rId" + (worksheetPart.TableDefinitionParts.Count() + 1));
-                    //int tableNumber = worksheetPart.TableDefinitionParts.Count();
-                    //int colMin = 1;
-                    //int colMax = localizationFiles.Count + 1;
-                    //int rowMin = 1;
-                    //int rowMax = localizationFiles.Max(x => x.Texts.Count) + 1;
-                    //string reference = ((char)(64 + colMin)).ToString() + rowMin + ":" + ((char)(64 + colMax)).ToString() + rowMax;
-
-                    //Table table = new Table()
-                    //{
-                    //    Id = (uint)tableNumber,
-                    //    Name = "Table" + tableNumber,
-                    //    DisplayName = "Table" + tableNumber,
-                    //    Reference = reference,
-                    //    TotalsRowShown = false
-                    //};
-                    //AutoFilter autoFilter = new AutoFilter()
-                    //{
-                    //    Reference = reference
-                    //};
-
-                    //TableColumns tableColumns = new TableColumns()
-                    //{
-                    //    Count = (uint)(colMax - colMin + 1)
-                    //};
-
-                    //foreach (LocalizationFile localizationFile in localizationFiles)
-                    //{
-                    //    int localizationFileIndex = localizationFiles.IndexOf(localizationFile);
-
-                    //    tableColumns.Append(new TableColumn()
-                    //    {
-                    //        Id = (uint)(localizationFileIndex),
-                    //        Name = localizationFile.Culture
-                    //    });
-                    //}
-
-                    //TableStyleInfo tableStyleInfo = new TableStyleInfo()
-                    //{
-                    //    Name = "TableStyleLight1",
-                    //    ShowFirstColumn = false,
-                    //    ShowLastColumn = false,
-                    //    ShowRowStripes = true,
-                    //    ShowColumnStripes = false
-                    //};
-
-                    //table.Append(autoFilter);
-                    //table.Append(tableColumns);
-                    //table.Append(tableStyleInfo);
-
-                    //tableDefinitionPart.Table = table;
-
-                    #endregion TODO
-
                     // Save the Workbook
                     workbookPart.Workbook.Save();
 
@@ -262,24 +207,23 @@ namespace SteffBeckers.Abp.Cli
                     // Data rows
                     foreach (Row row in sheetData.Elements<Row>().Skip(1))
                     {
-                        List<Cell> cells = row.Elements<Cell>().ToList();
                         string localizationKey = null;
-
-                        foreach (Cell cell in cells)
+                        foreach (Cell cell in row.Elements<Cell>())
                         {
-                            int cellIndex = cells.IndexOf(cell);
+                            int? columnIndex = GetColumnIndex(cell);
                             string text = ReadExcelCell(cell, workbookPart);
 
-                            if (cellIndex == 0)
+                            if (columnIndex.HasValue && columnIndex.Value == 0)
                             {
                                 localizationKey = text;
                                 continue;
                             }
-
-                            if (!string.IsNullOrEmpty(localizationKey))
+                            else if (string.IsNullOrEmpty(localizationKey))
                             {
-                                localizationFiles[cellIndex - 1].Texts.TryAdd(localizationKey, text);
+                                continue;
                             }
+
+                            localizationFiles[columnIndex.Value - 1].Texts.TryAdd(localizationKey, text);
                         }
                     }
 
@@ -289,6 +233,11 @@ namespace SteffBeckers.Abp.Cli
                     // Write to .json files
                     foreach (LocalizationFile localizationFile in localizationFiles)
                     {
+                        // Sort localizations
+                        localizationFile.Texts = localizationFile.Texts
+                            .OrderBy(x => x.Key)
+                            .ToDictionary(x => x.Key, x => x.Value);
+
                         string localizationFileJson = JsonConvert.SerializeObject(localizationFile, Formatting.Indented);
                         await File.WriteAllTextAsync(localizationFile.Path, localizationFileJson);
                     }
@@ -346,14 +295,45 @@ namespace SteffBeckers.Abp.Cli
         private static string ReadExcelCell(Cell cell, WorkbookPart workbookPart)
         {
             CellValue cellValue = cell.CellValue;
+
             string text = (cellValue == null) ? cell.InnerText : cellValue.Text;
+
             if ((cell.DataType != null) && (cell.DataType == CellValues.SharedString))
             {
                 text = workbookPart.SharedStringTablePart.SharedStringTable
                     .Elements<SharedStringItem>().ElementAt(
                         Convert.ToInt32(cell.CellValue.Text)).InnerText;
             }
+
             return (text ?? string.Empty).Trim();
+        }
+
+        private static int? GetColumnIndex(Cell cell)
+        {
+            string cellReference = cell.CellReference;
+
+            if (string.IsNullOrEmpty(cellReference))
+            {
+                return null;
+            }
+
+            // Remove digits
+            string columnReference = Regex.Replace(cellReference.ToUpper(), @"[\d]", string.Empty);
+
+            int columnNumber = -1;
+            int mulitplier = 1;
+
+            // Working from the end of the letters take the ASCII code less 64 (so A = 1, B =2...etc)
+            // Then multiply that number by our multiplier (which starts at 1)
+            // Multiply our multiplier by 26 as there are 26 letters
+            foreach (char c in columnReference.ToCharArray().Reverse())
+            {
+                columnNumber += mulitplier * ((int)c - 64);
+                mulitplier = mulitplier * 26;
+            }
+
+            // This will match Excel's COLUMN function
+            return columnNumber;
         }
     }
 }
