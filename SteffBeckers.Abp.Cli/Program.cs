@@ -4,6 +4,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using Newtonsoft.Json;
 using SteffBeckers.Abp.Cli.Localization.Models;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -248,23 +249,51 @@ namespace SteffBeckers.Abp.Cli
                     .ToList();
 
                 DirectoryInfo currentDirectory = new DirectoryInfo(Directory.GetCurrentDirectory());
-                IEnumerable<FileInfo> files = currentDirectory.GetFiles("*.*", SearchOption.AllDirectories)
+                IEnumerable<FileInfo> files = currentDirectory.EnumerateFiles("*.*", SearchOption.AllDirectories)
                     .Where(x => !x.DirectoryName.Contains("node_modules"))
+                    .Where(x => !x.DirectoryName.Contains("Migrations"))
                     .Where(x =>
                         x.Name.EndsWith(".cs") ||
                         x.Name.EndsWith(".tpl") ||
                         x.Name.EndsWith(".html") ||
-                        x.Name.EndsWith(".ts"));
+                        x.Name.EndsWith(".ts"))
+                    .Where(x => !x.Name.EndsWith(".Designer.cs"))
+                    .Where(x => !x.Name.EndsWith(".g.cs"))
+                    .OrderBy(x => x.FullName);
 
                 Console.WriteLine("Localization scan started.");
+                Console.WriteLine();
 
-                foreach (FileInfo file in files)
+                ConcurrentBag<string> foundLocalizationKeys = new ConcurrentBag<string>();
+                Parallel.ForEach(files, async (file) =>
                 {
-                    Console.WriteLine($"TODO: Search in file: {file.Name}");
-                }
+                    Console.WriteLine($"Scanning: {file.FullName}");
 
-                Console.WriteLine("Localization scan stopped.");
-                Console.WriteLine($"{files.Count()} files searched.");
+                    string fileContent = await File.ReadAllTextAsync(file.FullName);
+
+                    foreach (string localizationKey in distinctLocalizationKeys)
+                    {
+                        if (fileContent.Contains(localizationKey))
+                        {
+                            foundLocalizationKeys.Add(localizationKey);
+                        }
+                    }
+                });
+
+                Console.WriteLine();
+                Console.WriteLine($"Localization scan stopped. {files.Count()} files searched.");
+
+                List<string> notFoundLocalizationKeys = distinctLocalizationKeys
+                    .Where(x => !foundLocalizationKeys.Any(y => y == x))
+                    .ToList();
+
+                Console.WriteLine();
+                Console.WriteLine($"{notFoundLocalizationKeys.Count()} localization keys which were not found in files:");
+
+                foreach (string localizationKey in notFoundLocalizationKeys)
+                {
+                    Console.WriteLine(localizationKey);
+                }
             });
 
             parentCommand.AddCommand(command);
