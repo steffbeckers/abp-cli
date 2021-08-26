@@ -9,6 +9,10 @@
   - Import localizations from formats to JSON
     - Excel
 
+### NuGet
+
+https://www.nuget.org/packages/SteffBeckers.Abp.Cli
+
 ### Install
 
 ```powershell
@@ -21,7 +25,7 @@ dotnet tool install -g SteffBeckers.Abp.Cli
 dotnet tool update -g SteffBeckers.Abp.Cli
 ```
 
-### Release to NuGet.org
+### Release
 
 ```powershell
 dotnet pack -c Release
