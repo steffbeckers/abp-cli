@@ -4,11 +4,11 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <AssemblyName>sbabp</AssemblyName>
-    <Version>1.0.7</Version>
+    <Version>1.0.8</Version>
     <PackAsTool>true</PackAsTool>
     <Authors>Steff Beckers</Authors>
     <Description>Steff's ABP.io CLI tool.</Description>
-    <RepositoryUrl>https://github.com/steffbeckers/abp-tools</RepositoryUrl>
+    <RepositoryUrl>https://github.com/steffbeckers/abp-cli</RepositoryUrl>
     <PackageTags>abp, cli</PackageTags>
     <Product>Steff's ABP.io CLI</Product>
     <PackageId>SteffBeckers.Abp.Cli</PackageId>
