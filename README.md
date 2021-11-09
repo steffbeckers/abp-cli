@@ -1,6 +1,6 @@
-# ABP.io dev tools
+# SteffBeckers.Abp.Cli for ABP.io projects
 
-## SteffBeckers.Abp.Cli
+## Commands
 
 - Localization
   - Scan folder, search for localization keys
@@ -9,17 +9,17 @@
   - Import localizations from formats to JSON
     - Excel
 
-### NuGet
+## NuGet
 
 https://www.nuget.org/packages/SteffBeckers.Abp.Cli
 
-### Install
+### Installation
 
 ```powershell
 dotnet tool install -g SteffBeckers.Abp.Cli
 ```
 
-### Update
+### Updates
 
 ```powershell
 dotnet tool update -g SteffBeckers.Abp.Cli
